@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas as pd
 try:
     import cPickle as p
@@ -90,12 +91,13 @@ def extract_features(data_frame,feature_list,target_file=None,header=False,index
         df.to_csv(DATA_DIR+target_file,index=index,header=header)
     return df
 
-def read_data_list(file_path,contains_header=True):
+def read_data_list(file_name,contains_header=True):
     '''
     Function to read data  in a csv fileand return as a list of lists
 
     ------
     Args:
+    file_name: the name of the file containing data
     contains_header: Boolean variable indicating whether the file contains a header row (Optional, defaults to True).
 
     ------
@@ -103,7 +105,7 @@ def read_data_list(file_path,contains_header=True):
     data: The data in the csv as a list of lists
     header: the header of the csv file. Returned only when header exists
     '''
-    with open(DATA_DIR+file_path,'r') as f:
+    with open(DATA_DIR+file_name,'r') as f:
         reader=csv.reader(f)
         data=[row for row in reader]
         if contains_header:
@@ -129,11 +131,11 @@ def create_train_test_split(data,train_ratio):
 
     shuffle_indices=np.arange(len(data))
     np.random.shuffle(shuffle_indices)
-    n_train_samples=np.floor(len(data)*train_ratio)
+    n_train_samples=int(np.floor(len(data)*train_ratio))
     train_indices=shuffle_indices[0:n_train_samples]
-    test_indices=Shuffle_indices[n_train_samples:]
-    train_data=data[train_indices]
-    test_data=data[test_indices]
+    test_indices=shuffle_indices[n_train_samples:]
+    train_data=[data[i] for i in train_indices]
+    test_data=[data[i] for i in test_indices]
     return train_data,test_data
     
 
@@ -145,15 +147,14 @@ def main():
     else:
         df=read_raw_data()
 
-    # print df
-    print "==================================="
-    print "Read DF"
-    print "==================================="
+    print("===================================")
+    print("Read DF")
+    print("===================================")
     df2=compute_sentiment_scores(df,use_dump=True)
     print("Scores calculated")
     feature_list=['reviewerID','asin','overall','unixReviewTime']
     df3=extract_features(df2,feature_list,'data_collab.csv')
-    print df3
+    # print df3
     return
 
 if __name__=='__main__':
