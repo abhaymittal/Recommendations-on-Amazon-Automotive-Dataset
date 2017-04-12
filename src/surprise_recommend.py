@@ -74,23 +74,26 @@ class Surprise_recommender:
             
             param_grid = {'n_epochs':np.arange(1,2).tolist(),'n_factors':np.arange(1,2).tolist(),'lr_all':[0.001,0.002],'reg_all':[0.1,0.2]}
             grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
-            grid_search.evaluate(data_set)
+            grid_search.evaluate(validation_set)
             best_model_RMSE = grid_search.best_params['RMSE']
-            training_rmse = grid_search.best_score['RMSE']
+            validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_params['MAE']
-            training_mae = grid_search.best_score['MAE']
-            print(training_RMSE)
-            print(training_mae)
+            validation_mae = grid_search.best_score['MAE']
+            print(validation_rmse)
+            print(validation_mae)
             
-            '''
             #Test based on best training RMSE
             n_epochs = best_model_RMSE['n_epochs']
             n_factors = best_model_RMSE['n_factors']
             lr_all = best_model_RMSE['lr_all']
             reg_all = best_model_RMSE['reg_all']
             algo = SVD(n_epochs = n_epochs, n_factors = n_factors,lr_all = lr_all, reg_all = reg_all)
+            algo.train(train_set)
             predictions = algo.test(test_set)
-            '''
+            test_rmse = accuracy.rmse(predictions,verbose = True)
+            test_mae = accuracy.mae(predictions,verbose = True)
+            print("RMSE of predictions",test_rmse)
+            print("MAE of predictions",test_mae)
 
 class DatasetForCV(DatasetAutoFolds):
     
