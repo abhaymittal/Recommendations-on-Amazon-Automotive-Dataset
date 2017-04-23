@@ -5,6 +5,8 @@ from surprise.dataset import Dataset
 from surprise import evaluate
 from surprise import Reader
 from surprise import SVD
+from surprise import NMF
+from surprise import KNNWithMeans
 from surprise import GridSearch
 from surprise import accuracy
 import numpy as np
@@ -70,6 +72,7 @@ class Surprise_recommender:
         ------
         Returns:Model that can be evaluated on the test set
         '''
+        
         if algorithm == 'SVD':
             
             param_grid = {'n_epochs':np.arange(1,2).tolist(),'n_factors':np.arange(1,2).tolist(),'lr_all':[0.001,0.002],'reg_all':[0.1,0.2]}
@@ -88,6 +91,51 @@ class Surprise_recommender:
             lr_all = best_model_RMSE['lr_all']
             reg_all = best_model_RMSE['reg_all']
             algo = SVD(n_epochs = n_epochs, n_factors = n_factors,lr_all = lr_all, reg_all = reg_all)
+            algo.train(train_set)
+            predictions = algo.test(test_set)
+            test_rmse = accuracy.rmse(predictions,verbose = True)
+            test_mae = accuracy.mae(predictions,verbose = True)
+            print("RMSE of predictions",test_rmse)
+            print("MAE of predictions",test_mae)
+        
+        if algorithm == 'NMF':
+            
+            param_grid = {'n_epochs':np.arange(1,2).tolist(),'n_factors':np.arange(1,2).tolist()}
+            grid_search = GridSearch(NMF, param_grid, measures=['RMSE', 'MAE'])
+            grid_search.evaluate(validation_set)
+            best_model_RMSE = grid_search.best_params['RMSE']
+            validation_rmse = grid_search.best_score['RMSE']
+            best_model_mae = grid_search.best_params['MAE']
+            validation_mae = grid_search.best_score['MAE']
+            print(validation_rmse)
+            print(validation_mae)
+            
+            #Test based on best training RMSE
+            n_epochs = best_model_RMSE['n_epochs']
+            n_factors = best_model_RMSE['n_factors']
+            algo = NMF(n_epochs = n_epochs, n_factors = n_factors)
+            algo.train(train_set)
+            predictions = algo.test(test_set)
+            test_rmse = accuracy.rmse(predictions,verbose = True)
+            test_mae = accuracy.mae(predictions,verbose = True)
+            print("RMSE of predictions",test_rmse)
+            print("MAE of predictions",test_mae)
+        
+        if algorithm == 'KNNWithMeans':
+            param_grid = {'k':np.arange(1,2).tolist(),'sim_options':[{'name':'cosine','user_based':True},
+                {'name':'msd','user_based':True},{'name':'pearson','user_based':True}]}
+            grid_search = GridSearch(KNNWithMeans,param_grid,measures=['RMSE','MAE'])
+            grid_search.evaluate(validation_set)
+
+            best_model_RMSE = grid_search.best_params['RMSE']
+            validation_rmse = grid_search.best_score['RMSE']
+            best_model_mae = grid_search.best_score['MAE']
+            validation_mae = grid_search.best_score['MAE']
+
+            #Test based on best training RMSE
+            k = best_model_RMSE['k']
+            sim_options = best_model_RMSE['sim_options']
+            algo = KNNWithMeans(k = k, sim_options = sim_options)
             algo.train(train_set)
             predictions = algo.test(test_set)
             test_rmse = accuracy.rmse(predictions,verbose = True)
@@ -116,7 +164,8 @@ def main():
     validation = DatasetForCV(train,None,reader)
     train=sp.create_train_set(train)
     test=sp.create_test_set(test)
-    sp.train_test_model(validation,train,test,'SVD')
+    sp.train_test_model(validation,train,test,'NMF')
+    sp.train_test_model(validation,train,test,'KNNWithMeans')
     # print(train)
     # for t in test:
     #     print(t)
