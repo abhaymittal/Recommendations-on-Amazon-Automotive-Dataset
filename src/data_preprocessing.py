@@ -140,6 +140,17 @@ def create_train_test_split(data,train_ratio):
     return train_data,test_data
     
 def compute_combined_score(data_frame):
+    '''
+    Function to compute combined score from sentiment score and overall rating
+
+    ------
+    Args:
+    data_frame: Pandas dataframe containing sentiment scores and reviews
+
+    ------
+    Returns:
+    data_frame: Pandas dataframe containing combined scores
+    '''
     ratings = np.array(data_frame['overall'])
     sentiment_scores = np.array(data_frame['scores'])
     #print(type(ratings))
