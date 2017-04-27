@@ -68,6 +68,7 @@ def compute_sentiment_scores(data_frame,use_dump=True,target_file=None):
 
     return data_frame
 
+
 def extract_features(data_frame,feature_list,target_file=None,header=False,index=False):
     '''
     Function to extract some columns from a data frame and return them
@@ -138,6 +139,26 @@ def create_train_test_split(data,train_ratio):
     test_data=[data[i] for i in test_indices]
     return train_data,test_data
     
+def compute_combined_score(data_frame):
+    ratings = np.array(data_frame['overall'])
+    sentiment_scores = np.array(data_frame['scores'])
+    #print(type(ratings))
+    #print(type(sentiment_scores))
+    ratings_sd = np.std(ratings)
+    sentiment_scores_sd = np.std(sentiment_scores)
+    mean_ratings = np.mean(ratings)
+    mean_sentiment_scores = np.mean(sentiment_scores)
+    
+    combined_ratings = []
+    
+    for rating,sentiment_score in zip(ratings,sentiment_scores):
+        scaled_rating = (float(rating) - mean_ratings)/ratings_sd
+        scaled_sentiment_score = (float(sentiment_score) - mean_sentiment_scores)/sentiment_scores_sd
+        combined_ratings.append(scaled_rating+scaled_sentiment_score)
+    print(np.mean(np.array(combined_ratings)),np.std(np.array(combined_ratings)))
+    data_frame['combinedScore'] = pd.Series(combined_ratings)
+    
+    return data_frame
 
 
 
@@ -151,10 +172,16 @@ def main():
     print("Read DF")
     print("===================================")
     df2=compute_sentiment_scores(df,use_dump=True)
+    #print(df2.dtypes)
     print("Scores calculated")
+    df3 = compute_combined_score(df2)
+    print(df3.dtypes)
     feature_list=['reviewerID','asin','overall','unixReviewTime']
-    df3=extract_features(df2,feature_list,'data_collab.csv')
-    # print df3
+    feature_list_sentiment_scores = ['reviewerID','asin','scores','unixReviewTime']
+    feature_list_combined = ['reviewerID','asin','combinedScore','unixReviewTime']
+    df4 = extract_features(df2,feature_list_sentiment_scores,'data_collab_sentiment.csv')
+    df5=extract_features(df2,feature_list,'data_collab.csv')
+    df6 = extract_features(df3,feature_list_combined,'data_collab_combined.csv')
     return
 
 if __name__=='__main__':

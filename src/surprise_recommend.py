@@ -11,7 +11,7 @@ from surprise import GridSearch
 from surprise import accuracy
 import numpy as np
 import data_preprocessing as dp
-
+import pprint
 # reader = Reader(line_format='user item rating timestamp', sep=',')
 
 # data = Dataset.load_from_file('../data_collab.csv', reader=reader)
@@ -82,8 +82,10 @@ class Surprise_recommender:
             validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_params['MAE']
             validation_mae = grid_search.best_score['MAE']
-            print(validation_rmse)
-            print(validation_mae)
+            #print(validation_rmse)
+            #print(validation_mae)
+            print(type(grid_search.cv_results))
+            print(grid_search.cv_results)
             
             #Test based on best training RMSE
             n_epochs = best_model_RMSE['n_epochs']
@@ -122,7 +124,7 @@ class Surprise_recommender:
             print("MAE of predictions",test_mae)
         
         if algorithm == 'KNNWithMeans':
-            param_grid = {'k':np.arange(1,2).tolist(),'sim_options':[{'name':'cosine','user_based':True},
+            param_grid = {'k':np.arange(1,20).tolist(),'sim_options':[{'name':'cosine','user_based':True},
                 {'name':'msd','user_based':True},{'name':'pearson','user_based':True}]}
             grid_search = GridSearch(KNNWithMeans,param_grid,measures=['RMSE','MAE'])
             grid_search.evaluate(validation_set)
@@ -154,18 +156,47 @@ class DatasetForCV(DatasetAutoFolds):
         self.ratings_file=ratings_file
 
 def main():
+    
     data=dp.read_data_list('data_collab.csv',contains_header=False)
+    data_sentiment = dp.read_data_list('data_collab_sentiment.csv',contains_header = False)
+    data_combined = dp.read_data_list('data_collab_combined.csv',contains_header = False)
+    
     for d in data:
         d[2] = float(d[2])
+    
+    for d in data_sentiment:
+        d[2] = float(d[2])
+    
+    for d in data_combined:
+        d[2] = float(d[2])
+
+
     print("Size of data = ",len(data))
     reader = Reader(line_format='user item rating timestamp', sep=',')
     sp=Surprise_recommender(reader)
+    
+    #Create splits
     train,test=dp.create_train_test_split(data,0.8)
+    train_sentiment,test_sentiment=dp.create_train_test_split(data_sentiment,0.8)
+    train_combined,test_combined = dp.create_train_test_split(data_combined,0.8)
+    
+    #Create validation sets
     validation = DatasetForCV(train,None,reader)
+    validation_sentiment  = DatasetForCV(train_sentiment,None, reader)
+    validation_combined = DatasetForCV(train_combined,None,reader)
+    
+    #Create train and test sets
     train=sp.create_train_set(train)
     test=sp.create_test_set(test)
-    sp.train_test_model(validation,train,test,'NMF')
-    sp.train_test_model(validation,train,test,'KNNWithMeans')
+    train_sentiment = sp.create_train_set(train_sentiment)
+    test_sentiment = sp.create_test_set(test_sentiment)
+    train_combined = sp.create_train_set(train_combined)
+    test_combined = sp.create_test_set(test_combined)
+    
+    #sp.train_test_model(validation,train,test,'NMF')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'SVD')
+    #sp.train_test_model(validation,train,test,'KNNWithMeans')
+    #sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD')
     # print(train)
     # for t in test:
     #     print(t)
