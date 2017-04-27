@@ -135,7 +135,11 @@ def create_train_test_split(data,train_ratio,train_indices=None,test_indices=Non
         print("Number of users = ",len(users))
         train_indices=[]
         test_indices=[]
+        j=0
         for user in users:
+            j+=1
+            if j%1000==0:
+                print("Touchdown ,j = ",j)
             user_entries=[i for i,x in enumerate(data) if x[0]==user]
             # print("Number of user items for user",user," = ",len(user_entries))
             # print("Entries = ",user_entries)

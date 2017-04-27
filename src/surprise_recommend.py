@@ -1,6 +1,5 @@
 from __future__ import print_function
 from surprise import BaselineOnly
-import cPickle as p
 from surprise.dataset import DatasetAutoFolds
 from surprise.dataset import Dataset
 from surprise import evaluate
@@ -14,9 +13,15 @@ import numpy as np
 import data_preprocessing as dp
 import pprint
 import datetime as dt
+import os
+try:
+    import cPickle as p
+except:
+    import Pickle as p
 # reader = Reader(line_format='user item rating timestamp', sep=',')
 
 # data = Dataset.load_from_file('../data_collab.csv', reader=reader)
+DATA_DIR='../data/'
 
 class Surprise_recommender:
     def __init__(self,reader):
@@ -202,6 +207,17 @@ class Surprise_recommender:
         # Get 1000 random negative items
         negative_indices=np.random.randint(0,len(negative_items),size=1000)
         negative_subset=[negative_items[x] for x in negative_indices]
+        # Get 5 positive items from testing set
+        if len(item_test)>5:
+            positive_subset=np.random.shuffle(list(item_test))[:5]
+        else:
+            positive_subset=np.random.shuffle(list(item_test))
+        subset=negative_subset+positive_subset
+
+        for item in subset:
+            pred=algo.predict(user,item,r_ui=4,verbose=False)
+            print(pred)
+        
         return
 
 class DatasetForCV(DatasetAutoFolds):
@@ -237,16 +253,23 @@ def main():
 
 
     #Create splits
-    train,test,train_indices,test_indices=dp.create_train_test_split(data,0.8)
-    train_sentiment,test_sentiment=dp.create_train_test_split(data_sentiment,0.8,train_indices,test_indices)
-    train_combined,test_combined= dp.create_train_test_split(data_combined,0.8,train_indices,test_indices)
-    
+    if not('train_test_splits.p' in os.listdir(DATA_DIR)):
+        train,test,train_indices,test_indices=dp.create_train_test_split(data,0.8)
+        train_sentiment,test_sentiment=dp.create_train_test_split(data_sentiment,0.8,train_indices,test_indices)
+        train_combined,test_combined= dp.create_train_test_split(data_combined,0.8,train_indices,test_indices)
+        print("Creating pickle dump")
+        with open(DATA_DIR+'train_test_splits.p','wb') as f:
+            p.dump([train_indices, test_indices, train,test,train_sentiment,test_sentiment,train_combined,test_combined],f)
+    else:
+        print("Load pickle dump")
+        with open(DATA_DIR+'train_test_splits.p','rb') as f:
+            train_indices, test_indices, train,test,train_sentiment,test_sentiment,train_combined,test_combined=p.load(f)
     #Create validation sets
     validation = DatasetForCV(train,None,reader)
     validation_sentiment  = DatasetForCV(train_sentiment,None, reader)
     validation_combined = DatasetForCV(train_combined,None,reader)
 
-    # sp.generate_top_n_recommendation(test,train)
+
     # #Create train and test sets
     train=sp.create_train_set(train)
     test=sp.create_test_set(test)
@@ -256,42 +279,44 @@ def main():
     test_sentiment = sp.create_test_set(test_sentiment)
     train_combined = sp.create_train_set(train_combined)
     test_combined = sp.create_test_set(test_combined)
+
+
+    # sp.generate_top_n_recommendation(test,train)
+    # #Testing and trainig models based on RMSE
+    # '''
+    # #Run and measure RMSE, MAE for different algorithms
+    # print('--------------Normal Ratings---------------------')
+    # time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
+    # print('--------------Combined Scores---------------------')
+    # time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    # print('--------------Sentiment Scores---------------------')
+    # time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+    # ''' 
+    #  #Run and measure RMSE, MAE for different algorithms
     
-    #Testing and trainig models based on RMSE
-    '''
-    #Run and measure RMSE, MAE for different algorithms
-    print('--------------Normal Ratings---------------------')
-    time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
-    print('--------------Combined Scores---------------------')
-    time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
-    print('--------------Sentiment Scores---------------------')
-    time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
-    ''' 
-     #Run and measure RMSE, MAE for different algorithms
+    # print('--------------Normal Ratings---------------------')
+    # time_normal_nmf = sp.train_test_model(validation,train,test,'NMF','rating')
+    # print('--------------Combined Scores---------------------')
+    # time_combined_nmf = sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
+    # print('--------------Sentiment Scores---------------------')
+    # time_sentiment_nmf = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
+    # '''
+    # print('--------------Normal Ratings---------------------')
+    # time_normal_knn = sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
+    # print('--------------Combined Scores---------------------')
+    # time_combined_knn = sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
+    # print('--------------Sentiment Scores---------------------')
+    # time_sentiment_knn = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
+    # '''
+    # '''
+    # sp.train_test_model(validation,train,test,'NMF','rating')
+    # sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
+    # sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
     
-    print('--------------Normal Ratings---------------------')
-    time_normal_nmf = sp.train_test_model(validation,train,test,'NMF','rating')
-    print('--------------Combined Scores---------------------')
-    time_combined_nmf = sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
-    print('--------------Sentiment Scores---------------------')
-    time_sentiment_nmf = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
-    '''
-    print('--------------Normal Ratings---------------------')
-    time_normal_knn = sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
-    print('--------------Combined Scores---------------------')
-    time_combined_knn = sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
-    print('--------------Sentiment Scores---------------------')
-    time_sentiment_knn = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
-    '''
-    '''
-    sp.train_test_model(validation,train,test,'NMF','rating')
-    sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
-    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
-    
-    sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
-    sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
-    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
-    '''
+    # sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
+    # sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
+    # sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
+    # '''
     # print(train)
     # for t in test:
     #     print(t)
