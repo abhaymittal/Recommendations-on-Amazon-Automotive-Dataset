@@ -1,5 +1,6 @@
 from __future__ import print_function
 from surprise import BaselineOnly
+import cPickle as p
 from surprise.dataset import DatasetAutoFolds
 from surprise.dataset import Dataset
 from surprise import evaluate
@@ -60,7 +61,7 @@ class Surprise_recommender:
         ds=Dataset(self.reader)
         return ds.construct_trainset(train_data)
     
-    def train_test_model(self,validation_set,train_set,test_set,algorithm):
+    def train_test_model(self,validation_set,train_set,test_set,algorithm,task):
         '''
         Function to train models using different algorithms
 
@@ -68,6 +69,9 @@ class Surprise_recommender:
         Args:
         train_set: The training data formatted according to the needs of surprise
         algorithm: The algorithm for training the model
+        test_set: Testing data to check RMSE and MAE after GridSearch
+        validation_set: Dataset for hyperparameter optimization
+        task: Make predictions for rating, sentiment scores or for combined rating
 
         ------
         Returns:Model that can be evaluated on the test set
@@ -75,9 +79,10 @@ class Surprise_recommender:
         
         if algorithm == 'SVD':
             
-            param_grid = {'n_epochs':np.arange(1,2).tolist(),'n_factors':np.arange(1,2).tolist(),'lr_all':[0.001,0.002],'reg_all':[0.1,0.2]}
+            param_grid = {'n_epochs':np.arange(0,100,10).tolist(),'n_factors':[10,100]}
             grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
             grid_search.evaluate(validation_set)
+            p.dump(grid_search,open('../stats/svd_results_'+task+'.p','wb'))
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_params['MAE']
@@ -90,9 +95,7 @@ class Surprise_recommender:
             #Test based on best training RMSE
             n_epochs = best_model_RMSE['n_epochs']
             n_factors = best_model_RMSE['n_factors']
-            lr_all = best_model_RMSE['lr_all']
-            reg_all = best_model_RMSE['reg_all']
-            algo = SVD(n_epochs = n_epochs, n_factors = n_factors,lr_all = lr_all, reg_all = reg_all)
+            algo = SVD(n_epochs = n_epochs, n_factors = n_factors)
             algo.train(train_set)
             predictions = algo.test(test_set)
             test_rmse = accuracy.rmse(predictions,verbose = True)
@@ -102,9 +105,10 @@ class Surprise_recommender:
         
         if algorithm == 'NMF':
             
-            param_grid = {'n_epochs':np.arange(1,2).tolist(),'n_factors':np.arange(1,2).tolist()}
+            param_grid = {'n_epochs':np.arange(1,100,10).tolist(),'n_factors':[10,100]}
             grid_search = GridSearch(NMF, param_grid, measures=['RMSE', 'MAE'])
             grid_search.evaluate(validation_set)
+            p.dump(grid_search,open('../stats/nmf_results_'+task+'.p','wb'))
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_params['MAE']
@@ -128,7 +132,8 @@ class Surprise_recommender:
                 {'name':'msd','user_based':True},{'name':'pearson','user_based':True}]}
             grid_search = GridSearch(KNNWithMeans,param_grid,measures=['RMSE','MAE'])
             grid_search.evaluate(validation_set)
-
+            p.dump(grid_search,open('../stats/knn_means_results'+task+'.p','wb'))
+    
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_score['MAE']
@@ -157,6 +162,7 @@ class DatasetForCV(DatasetAutoFolds):
 
 def main():
     
+    #Load the data
     data=dp.read_data_list('data_collab.csv',contains_header=False)
     data_sentiment = dp.read_data_list('data_collab_sentiment.csv',contains_header = False)
     data_combined = dp.read_data_list('data_collab_combined.csv',contains_header = False)
@@ -193,10 +199,23 @@ def main():
     train_combined = sp.create_train_set(train_combined)
     test_combined = sp.create_test_set(test_combined)
     
-    #sp.train_test_model(validation,train,test,'NMF')
-    sp.train_test_model(validation_combined,train_combined,test_combined,'SVD')
-    #sp.train_test_model(validation,train,test,'KNNWithMeans')
-    #sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD')
+    #Run and measure RMSE, MAE for different algorithms
+    print('--------------Normal Ratings---------------------')
+    sp.train_test_model(validation,train,test,'SVD','rating')
+    print('--------------Combined Scores---------------------')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    print('--------------Sentiment Scores---------------------')
+    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+    
+    '''
+    sp.train_test_model(validation,train,test,'NMF','rating')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
+    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
+    
+    sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
+    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
+    '''
     # print(train)
     # for t in test:
     #     print(t)
