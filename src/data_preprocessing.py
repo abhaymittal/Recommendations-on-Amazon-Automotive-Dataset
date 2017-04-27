@@ -114,7 +114,7 @@ def read_data_list(file_name,contains_header=True):
             return data,header
     return data
 
-def create_train_test_split(data,train_ratio):
+def create_train_test_split(data,train_ratio,train_indices=None,test_indices=None):
     '''
     Function to create training and test splits from the data
     
@@ -131,13 +131,19 @@ def create_train_test_split(data,train_ratio):
 
 
     shuffle_indices=np.arange(len(data))
-    np.random.shuffle(shuffle_indices)
-    n_train_samples=int(np.floor(len(data)*train_ratio))
-    train_indices=shuffle_indices[0:n_train_samples]
-    test_indices=shuffle_indices[n_train_samples:]
+    flag=False
+    if train_indices is None:
+        flag=True
+        np.random.shuffle(shuffle_indices)
+        n_train_samples=int(np.floor(len(data)*train_ratio))
+        train_indices=shuffle_indices[0:n_train_samples]
+        test_indices=shuffle_indices[n_train_samples:]
     train_data=[data[i] for i in train_indices]
     test_data=[data[i] for i in test_indices]
-    return train_data,test_data
+    if flag:
+        return train_data,test_data,train_indices,test_indices
+    else:
+        return train_data,test_data
     
 def compute_combined_score(data_frame):
     '''

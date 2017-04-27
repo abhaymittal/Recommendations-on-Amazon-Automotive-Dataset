@@ -79,7 +79,7 @@ class Surprise_recommender:
         
         if algorithm == 'SVD':
             
-            param_grid = {'n_epochs':np.arange(0,100,10).tolist(),'n_factors':[10,100]}
+            param_grid = {'n_epochs':np.arange(0,100,50).tolist(),'n_factors':[10,100]}
             grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
             grid_search.evaluate(validation_set)
             p.dump(grid_search,open('../stats/svd_results_'+task+'.p','wb'))
@@ -95,9 +95,9 @@ class Surprise_recommender:
             #Test based on best training RMSE
             n_epochs = best_model_RMSE['n_epochs']
             n_factors = best_model_RMSE['n_factors']
-            algo = SVD(n_epochs = n_epochs, n_factors = n_factors)
-            algo.train(train_set)
-            predictions = algo.test(test_set)
+            self.algo = SVD(n_epochs = n_epochs, n_factors = n_factors)
+            self.algo.train(train_set)
+            predictions = self.algo.test(test_set)
             test_rmse = accuracy.rmse(predictions,verbose = True)
             test_mae = accuracy.mae(predictions,verbose = True)
             print("RMSE of predictions",test_rmse)
@@ -119,9 +119,9 @@ class Surprise_recommender:
             #Test based on best training RMSE
             n_epochs = best_model_RMSE['n_epochs']
             n_factors = best_model_RMSE['n_factors']
-            algo = NMF(n_epochs = n_epochs, n_factors = n_factors)
-            algo.train(train_set)
-            predictions = algo.test(test_set)
+            self.algo = NMF(n_epochs = n_epochs, n_factors = n_factors)
+            self.algo.train(train_set)
+            predictions = self.algo.test(test_set)
             test_rmse = accuracy.rmse(predictions,verbose = True)
             test_mae = accuracy.mae(predictions,verbose = True)
             print("RMSE of predictions",test_rmse)
@@ -142,13 +142,27 @@ class Surprise_recommender:
             #Test based on best training RMSE
             k = best_model_RMSE['k']
             sim_options = best_model_RMSE['sim_options']
-            algo = KNNWithMeans(k = k, sim_options = sim_options)
-            algo.train(train_set)
-            predictions = algo.test(test_set)
+            self.algo = KNNWithMeans(k = k, sim_options = sim_options)
+            self.algo.train(train_set)
+            predictions = self.algo.test(test_set)
             test_rmse = accuracy.rmse(predictions,verbose = True)
             test_mae = accuracy.mae(predictions,verbose = True)
             print("RMSE of predictions",test_rmse)
             print("MAE of predictions",test_mae)
+            return
+
+        def generate_top_n_recommendation(self,user_id,item_set,test_item_set,train_item_set):
+            '''
+            Function to generate top N recommendations
+
+            ----
+            Args:
+            user_id: The id of the user
+            item_set: The set of all the items available
+            test_item_set: The set of items in the testing set
+            train_item_set: The set of items in the training set
+            '''
+            return
 
 class DatasetForCV(DatasetAutoFolds):
     
@@ -182,9 +196,9 @@ def main():
     sp=Surprise_recommender(reader)
     
     #Create splits
-    train,test=dp.create_train_test_split(data,0.8)
-    train_sentiment,test_sentiment=dp.create_train_test_split(data_sentiment,0.8)
-    train_combined,test_combined = dp.create_train_test_split(data_combined,0.8)
+    train,test,train_indices,test_indices=dp.create_train_test_split(data,0.8)
+    train_sentiment,test_sentiment=dp.create_train_test_split(data_sentiment,0.8,train_indices,test_indices)
+    train_combined,test_combined= dp.create_train_test_split(data_combined,0.8,train_indices,test_indices)
     
     #Create validation sets
     validation = DatasetForCV(train,None,reader)
@@ -202,10 +216,10 @@ def main():
     #Run and measure RMSE, MAE for different algorithms
     print('--------------Normal Ratings---------------------')
     sp.train_test_model(validation,train,test,'SVD','rating')
-    print('--------------Combined Scores---------------------')
-    sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
-    print('--------------Sentiment Scores---------------------')
-    sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+    # print('--------------Combined Scores---------------------')
+    # sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    # print('--------------Sentiment Scores---------------------')
+    # sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
     
     '''
     sp.train_test_model(validation,train,test,'NMF','rating')
