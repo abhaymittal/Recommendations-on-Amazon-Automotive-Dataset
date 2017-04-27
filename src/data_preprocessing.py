@@ -128,16 +128,25 @@ def create_train_test_split(data,train_ratio,train_indices=None,test_indices=Non
     train_data: list of lists containing training samples
     test_data: list of lists containing testing samples
     '''
-
-
-    shuffle_indices=np.arange(len(data))
     flag=False
     if train_indices is None:
         flag=True
-        np.random.shuffle(shuffle_indices)
-        n_train_samples=int(np.floor(len(data)*train_ratio))
-        train_indices=shuffle_indices[0:n_train_samples]
-        test_indices=shuffle_indices[n_train_samples:]
+        users=set([x[0] for x in data])
+        print("Number of users = ",len(users))
+        train_indices=[]
+        test_indices=[]
+        for user in users:
+            user_entries=[i for i,x in enumerate(data) if x[0]==user]
+            # print("Number of user items for user",user," = ",len(user_entries))
+            # print("Entries = ",user_entries)
+            np.random.shuffle(user_entries)
+            n_train_samples=int(np.floor(len(user_entries)*train_ratio))
+            tr_in=user_entries[0:n_train_samples]
+            te_in=user_entries[n_train_samples:]
+            for i in tr_in:
+                train_indices.append(i)
+            for i in te_in:
+                test_indices.append(i)
     train_data=[data[i] for i in train_indices]
     test_data=[data[i] for i in test_indices]
     if flag:
