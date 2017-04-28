@@ -9,6 +9,7 @@ from surprise import NMF
 from surprise import KNNWithMeans
 from surprise import GridSearch
 from surprise import accuracy
+from operator import itemgetter
 import numpy as np
 import data_preprocessing as dp
 import pprint
@@ -87,7 +88,7 @@ class Surprise_recommender:
         
         if algorithm == 'SVD':
             
-            param_grid = {'n_epochs':np.arange(0,100,10).tolist(),'n_factors':[10,100]}
+            param_grid = {'n_epochs':np.arange(0,100,90).tolist(),'n_factors':[10]}
             grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
             
             start = dt.datetime.now()
@@ -181,44 +182,103 @@ class Surprise_recommender:
         train_set: The training set as a list
         '''
         user_list=set([x[0] for x in train_set])
-        print ("NUmber of users = ",len(user_list))
+        print ("Number of users = ",len(user_list))
         
-        user=list(user_list)[0]
-        item_train=set([x[1] for x in train_set if x[0]==user])
-        item_test=set([x[1] for x in test_set if x[0]==user])
-        item_train_all=set([x[1] for x in train_set])
-        item_test_all=set([x[1] for x in test_set])
-        item_all=item_train_all.union(item_test_all)
-        print("===============================================================")
-        print("User = ",user)
-        # print("===============================================================")
-        # print("TRain items = ",item_train)
-        # print("===============================================================")
-        # print("Test items = ",item_test)
-        print("===============================================================")
-        print("Number of items = ",len(item_all))
-        # print("ITem all = ",item_all)
-        print("===============================================================")
-        print("Number of positive items = ",len(item_train)+len(item_test))
-        print("===============================================================")
-        negative_items=[x for x in item_all if x not in item_train and x not in item_test]
-        print("Number of negative items = ",len(negative_items))
+        precision_list=[]
+        recall_list=[]
+        f_score_list=[]
+        j=0
+        for user in user_list:
+            # print("===============================================================")
+            # print("=====================+++++++++++++++++++++++===================")
+            # print("===============================================================")
+            j+=1
+            if j%1000==0:
+                print("Touchdown, j = ",j)
+            item_train=set([x[1] for x in train_set if x[0]==user])
+            item_test=set([x[1] for x in test_set if x[0]==user])
+            item_train_all=set([x[1] for x in train_set])
+            item_test_all=set([x[1] for x in test_set])
+            item_all=item_train_all.union(item_test_all)
+            # print("User = ",user)
+            # print("===============================================================")
+            # print("TRain items = ",item_train)
+            # print("===============================================================")
+            # print("Test items = ",item_test)
+            # print("ITem all = ",item_all)
+            # print("Number of  test items= ",len(item_test))
+            negative_items=[x for x in item_all if x not in item_train and x not in item_test]
+            # print("Number of negative items = ",len(negative_items))
 
-        # Get 1000 random negative items
-        negative_indices=np.random.randint(0,len(negative_items),size=1000)
-        negative_subset=[negative_items[x] for x in negative_indices]
-        # Get 5 positive items from testing set
-        if len(item_test)>5:
-            positive_subset=np.random.shuffle(list(item_test))[:5]
-        else:
-            positive_subset=np.random.shuffle(list(item_test))
-        subset=negative_subset+positive_subset
+            # Get 1000 random negative items
+            negative_indices=np.random.randint(0,len(negative_items),size=1000)
+            negative_subset=[negative_items[x] for x in negative_indices]
+            # Get 5 positive items from testing set:
+            positive_subset=list(item_test)
+            np.random.shuffle(positive_subset)
+            # print("Positive subset items = ",positive_subset)
+            # print(negative_subset)
+            subset=positive_subset+negative_subset
+            pred_list=[]
+            for item in subset:
+                pred=self.algo.predict(user,item,r_ui=1,verbose=False)
+                pred_list.append(pred)
+            predictions = sorted(pred_list, key=lambda x: x.est,reverse=True)
+            # print(" =============================================================")
+            precision=self.calculate_precision(predictions,positive_subset,10)
+            # print("Precision = ",precision)
+            recall=self.calculate_recall(predictions,positive_subset,10)
+            # print("Recall = ",recall)
+            # f_score=self.calculate_f_measure(precision,recall)
+            # print("F score = ",f_score)
+            precision_list.append(precision)
+            recall_list.append(recall)
+            # f_score_list.append(f_score)
 
-        for item in subset:
-            pred=algo.predict(user,item,r_ui=4,verbose=False)
-            print(pred)
-        
+        precision=np.mean(precision_list)
+        recall=np.mean(recall_list)
+        print ("Mean precision = ",precision)
+        print("Mean recall = ",recall)
+        print("fscore=",self.calculate_f_measure(precision,recall))
         return
+
+    def calculate_precision(self,predictions,positive_items,N):
+        '''
+        Function to calculate precision
+        '''
+        count=0
+        for i in np.arange(N):
+            p=predictions[i]
+            if p.iid in positive_items:
+                count+=1
+        precision=float(count)/N
+        return precision
+
+
+    def calculate_recall(self,predictions,positive_items,N):
+        '''
+        Function to calculate recall
+        '''
+        count=0
+        pred=predictions[:N] #Get TOP N Predictions
+        for p in positive_items:
+            for i in pred:
+                if i.iid==p:
+                    count+=1
+                    break
+
+        recall=float(count)/len(positive_items)
+        return recall
+
+    def  calculate_f_measure(self,precision,recall):
+        '''
+        Function to calculate recall
+        '''
+        try:
+            f=2.0*precision*recall/(precision+recall)
+        except:
+            f=0
+        return f
 
 class DatasetForCV(DatasetAutoFolds):
     
@@ -271,27 +331,32 @@ def main():
 
 
     # #Create train and test sets
+    train_list=train
     train=sp.create_train_set(train)
+    test_list=test
     test=sp.create_test_set(test)
     # print(train)
     # print(test)
+    train_sent_list=train_sentiment
     train_sentiment = sp.create_train_set(train_sentiment)
+    test_sent_list=test_sentiment
     test_sentiment = sp.create_test_set(test_sentiment)
     train_combined = sp.create_train_set(train_combined)
     test_combined = sp.create_test_set(test_combined)
 
 
-    # sp.generate_top_n_recommendation(test,train)
-    # #Testing and trainig models based on RMSE
-    # '''
-    # #Run and measure RMSE, MAE for different algorithms
-    # print('--------------Normal Ratings---------------------')
-    # time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
-    # print('--------------Combined Scores---------------------')
-    # time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
-    # print('--------------Sentiment Scores---------------------')
-    # time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
-    # ''' 
+    #Testing and trainig models based on RMSE
+    
+    #Run and measure RMSE, MAE for different algorithms
+    print('--------------Normal Ratings---------------------')
+    time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
+    sp.generate_top_n_recommendation(test_list,train_list)
+    '''
+    print('--------------Combined Scores---------------------')
+    time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    print('--------------Sentiment Scores---------------------')
+    time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+    ''' 
     #  #Run and measure RMSE, MAE for different algorithms
     
     # print('--------------Normal Ratings---------------------')
