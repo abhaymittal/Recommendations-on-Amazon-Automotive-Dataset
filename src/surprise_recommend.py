@@ -90,15 +90,15 @@ class Surprise_recommender:
         
         if algorithm == 'SVD':
             
-            param_grid = {'n_epochs':np.arange(100,101,100).tolist(),'n_factors':np.arange(1,11)}
-            grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'],verbose=2)
+            param_grid = {'n_epochs':np.arange(1,101,10).tolist(),'n_factors':[10,50,100]}
+            grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
             
             start = dt.datetime.now()
             grid_search.evaluate(validation_set)
             end = dt.datetime.now()
 
             time_taken = ((end-start).microseconds)/(1000000*60)
-            p.dump(grid_search,open('../stats/svd_results_'+task+'.p','wb'))
+            p.dump(grid_search.cv_results,open('../stats/svd_results_'+task+'.p','wb'))
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
             best_model_mae = grid_search.best_params['MAE']
@@ -345,51 +345,44 @@ def main():
     train_sentiment = sp.create_train_set(train_sentiment)
     test_sent_list=test_sentiment
     test_sentiment = sp.create_test_set(test_sentiment)
+    train_combined_list=train_combined
     train_combined = sp.create_train_set(train_combined)
+    test_combined_list=test_combined
     test_combined = sp.create_test_set(test_combined)
 
 
     #Testing and trainig models based on RMSE
-    
+
     #Run and measure RMSE, MAE for different algorithms
     print('--------------Normal Ratings---------------------')
     time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
-    # sp.generate_top_n_recommendation(test_list,train_list)
+    sp.generate_top_n_recommendation(test_list,train_list)
     
     print('--------------Combined Scores---------------------')
-    # time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
-    print('--------------Sentiment Scores---------------------')
-    # time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+    time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
+    #print('--------------Sentiment Scores---------------------')
+    #time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
      
     #  #Run and measure RMSE, MAE for different algorithms
     
-    # print('--------------Normal Ratings---------------------')
-    # time_normal_nmf = sp.train_test_model(validation,train,test,'NMF','rating')
-    # print('--------------Combined Scores---------------------')
-    # time_combined_nmf = sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
-    # print('--------------Sentiment Scores---------------------')
-    # time_sentiment_nmf = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
-    # '''
-    # print('--------------Normal Ratings---------------------')
-    # time_normal_knn = sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
-    # print('--------------Combined Scores---------------------')
-    # time_combined_knn = sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
-    # print('--------------Sentiment Scores---------------------')
-    # time_sentiment_knn = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
-    # '''
-    # '''
-    # sp.train_test_model(validation,train,test,'NMF','rating')
-    # sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
-    # sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
-    
-    # sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
-    # sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
-    # sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
-    # '''
-    # print(train)
-    # for t in test:
-    #     print(t)
-    # return 
+     print('--------------Normal Ratings---------------------')
+     time_normal_nmf = sp.train_test_model(validation,train,test,'NMF','rating')
+     sp.generate_top_n_recommendation(test_list,train_list)
+
+     print('--------------Combined Scores---------------------')
+     time_combined_nmf = sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
+     sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
+     #print('--------------Sentiment Scores---------------------')
+     #time_sentiment_nmf = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
+     '''
+     print('--------------Normal Ratings---------------------')
+     time_normal_knn = sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
+     print('--------------Combined Scores---------------------')
+     time_combined_knn = sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
+     #print('--------------Sentiment Scores---------------------')
+     #time_sentiment_knn = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
+     '''
 
 
 if __name__=='__main__':
