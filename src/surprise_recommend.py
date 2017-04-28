@@ -14,11 +14,13 @@ import numpy as np
 import data_preprocessing as dp
 import pprint
 import datetime as dt
+import threading
 import os
 try:
     import cPickle as p
 except:
     import Pickle as p
+
 # reader = Reader(line_format='user item rating timestamp', sep=',')
 
 # data = Dataset.load_from_file('../data_collab.csv', reader=reader)
@@ -88,8 +90,8 @@ class Surprise_recommender:
         
         if algorithm == 'SVD':
             
-            param_grid = {'n_epochs':np.arange(0,100,90).tolist(),'n_factors':[10]}
-            grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
+            param_grid = {'n_epochs':np.arange(100,101,100).tolist(),'n_factors':np.arange(1,11)}
+            grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'],verbose=2)
             
             start = dt.datetime.now()
             grid_search.evaluate(validation_set)
@@ -331,8 +333,10 @@ def main():
 
 
     # #Create train and test sets
+    print("Training length = ",len(train))
     train_list=train
     train=sp.create_train_set(train)
+    print("Test length = ",len(test))
     test_list=test
     test=sp.create_test_set(test)
     # print(train)
@@ -350,13 +354,13 @@ def main():
     #Run and measure RMSE, MAE for different algorithms
     print('--------------Normal Ratings---------------------')
     time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
-    sp.generate_top_n_recommendation(test_list,train_list)
-    '''
+    # sp.generate_top_n_recommendation(test_list,train_list)
+    
     print('--------------Combined Scores---------------------')
-    time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    # time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
     print('--------------Sentiment Scores---------------------')
-    time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
-    ''' 
+    # time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
+     
     #  #Run and measure RMSE, MAE for different algorithms
     
     # print('--------------Normal Ratings---------------------')

@@ -151,8 +151,15 @@ def create_train_test_split(data,train_ratio,train_indices=None,test_indices=Non
                 train_indices.append(i)
             for i in te_in:
                 test_indices.append(i)
-    train_data=[data[i] for i in train_indices]
-    test_data=[data[i] for i in test_indices]
+        np.random.shuffle(train_indices)
+        np.random.shuffle(test_indices)
+    if flag:
+        print(train_indices)
+    train_data=[data[i].copy() for i in train_indices]
+    if flag:
+        print("====================")
+        print(test_indices)
+    test_data=[data[i].copy() for i in test_indices]
     if flag:
         return train_data,test_data,train_indices,test_indices
     else:
