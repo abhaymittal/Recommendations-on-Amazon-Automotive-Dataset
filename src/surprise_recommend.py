@@ -13,7 +13,6 @@ from operator import itemgetter
 import numpy as np
 import data_preprocessing as dp
 import pprint
-import datetime as dt
 import threading
 import os
 try:
@@ -74,7 +73,8 @@ class Surprise_recommender:
     
     def train_test_model(self,validation_set,train_set,test_set,algorithm,task):
         '''
-        Function to train models using different algorithms
+        Function to train models using different algorithms. Dumps GridSearch results
+        for further analysis.
 
         ------
         Args:
@@ -85,7 +85,7 @@ class Surprise_recommender:
         task: Make predictions for rating, sentiment scores or for combined rating
 
         ------
-        Returns:Model that can be evaluated on the test set
+        Returns:None
         '''
         
         if algorithm == 'SVD':
@@ -93,11 +93,8 @@ class Surprise_recommender:
             param_grid = {'n_epochs':np.arange(1,101,10).tolist(),'n_factors':[10,50,100]}
             grid_search = GridSearch(SVD, param_grid, measures=['RMSE', 'MAE'])
             
-            start = dt.datetime.now()
             grid_search.evaluate(validation_set)
-            end = dt.datetime.now()
 
-            time_taken = ((end-start).microseconds)/(1000000*60)
             p.dump(grid_search.cv_results,open('../stats/svd_results_'+task+'.p','wb'))
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
@@ -123,10 +120,9 @@ class Surprise_recommender:
             
             param_grid = {'n_epochs':np.arange(0,100,10).tolist(),'n_factors':[10,100]}
             grid_search = GridSearch(NMF, param_grid, measures=['RMSE', 'MAE'])
-            start = dt.datetime.now() 
+
             grid_search.evaluate(validation_set)
-            end = dt.datetime.now()
-            time_taken = ((end-start).microseconds)/(1000000*60)
+            
             p.dump(grid_search,open('../stats/nmf_results_'+task+'.p','wb'))
             best_model_RMSE = grid_search.best_params['RMSE']
             validation_rmse = grid_search.best_score['RMSE']
@@ -150,10 +146,8 @@ class Surprise_recommender:
             param_grid = {'k':np.arange(1,20).tolist(),'sim_options':[{'name':'cosine','user_based':True},
                 {'name':'msd','user_based':True},{'name':'pearson','user_based':True}]}
             grid_search = GridSearch(KNNWithMeans,param_grid,measures=['RMSE','MAE'])
-            start = dt.datetime.now()
             grid_search.evaluate(validation_set)
-            end = dt.datetime.now()
-            time_taken = ((end-start).microseconds)/(1000000*60)
+            
             p.dump(grid_search,open('../stats/knn_means_results'+task+'.p','wb'))
     
             best_model_RMSE = grid_search.best_params['RMSE']
@@ -171,7 +165,6 @@ class Surprise_recommender:
             test_mae = accuracy.mae(predictions,verbose = True)
             print("RMSE of predictions",test_rmse)
             print("MAE of predictions",test_mae)
-            return time_taken
 
     def generate_top_n_recommendation(self,test_set,train_set):
         '''
@@ -352,42 +345,45 @@ def main():
 
 
     #Testing and trainig models based on RMSE
-    '''
+    
     #Run and measure RMSE, MAE for different algorithms
     print('--------------Normal Ratings---------------------')
-    time_normal_svd = sp.train_test_model(validation,train,test,'SVD','rating')
+    sp.train_test_model(validation,train,test,'SVD','rating')
     sp.generate_top_n_recommendation(test_list,train_list)
     
     print('--------------Combined Scores---------------------')
-    time_combined_svd = sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'SVD','combined')
     sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
-    #print('--------------Sentiment Scores---------------------')
-    #time_sentiment_svd = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'SVD','sentiment')
      
-    #  #Run and measure RMSE, MAE for different algorithms
+    
+    #time_exp_svd = sp.train_test_model(validation,train_combined,test_combined,'SVD','experiment')
+    
+    
     
      
     print('--------------Normal Ratings---------------------')
-    time_normal_nmf = sp.train_test_model(validation,train,test,'NMF','rating')
+    sp.train_test_model(validation,train,test,'NMF','rating')
     sp.generate_top_n_recommendation(test_list,train_list)
 
     print('--------------Combined Scores---------------------')
-    time_combined_nmf = sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'NMF','combined')
     sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
-     #print('--------------Sentiment Scores---------------------')
-     #time_sentiment_nmf = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'NMF','sentiment')
-    '''
-
+    
+    
+    #time_exp_nmf = sp.train_test_model(validation,train_combined,test_combined,'NMF','experiment')
+    
+    
     print('--------------Normal Ratings---------------------')
-    time_normal_knn = sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
+    sp.train_test_model(validation,train,test,'KNNWithMeans','rating')
     sp.generate_top_n_recommendation(test_list,train_list)
     
-    #print('--------------Combined Scores---------------------')
-    #time_combined_knn = sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
-    #sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
-    #print('--------------Sentiment Scores---------------------')
-     #print('--------------Sentiment Scores---------------------')
-     #time_sentiment_knn = sp.train_test_model(validation_sentiment,train_sentiment,test_sentiment,'KNNWithMeans','sentiment')
+
+    #time_exp_knn = sp.train_test_model(validation,train_combined,test_combined,'KNNWithMeans','experiment')
+    
+    
+    print('--------------Combined Scores---------------------')
+    sp.train_test_model(validation_combined,train_combined,test_combined,'KNNWithMeans','combined')
+    sp.generate_top_n_recommendation(test_combined_list,train_combined_list)
     
 
 
