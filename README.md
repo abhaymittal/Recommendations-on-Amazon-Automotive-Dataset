@@ -1,7 +1,7 @@
 # README #
 
-# Comparison of Recommendation Models On the Amazon Automotive
-Dataset
+# Comparison of Recommendation Models On the Amazon Automotive Dataset
+
 ### Developed by: Abhay Mittal and Suraj Subraveti
 
 ## Description of Files
