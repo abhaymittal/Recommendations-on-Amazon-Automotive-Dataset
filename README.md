@@ -5,8 +5,7 @@ Dataset
 ### Developed by: Abhay Mittal and Suraj Subraveti
 
 ## Description of Files
---src / - the source dir 
-
+-src / - the source dir 
 -data/ - directory used for storing data(to be created)
 -stats - directory to store some intermediate results(to be created)
 -Figures/ - dir to store figures(to be created)
